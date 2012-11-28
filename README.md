@@ -1,6 +1,6 @@
 #InteractiCrop
 
-Steal figures from other people's slide PDFs, easily.
+Steal figures from other people's slide PDFs, in vector form, easily.
 
 Quick instructions:
 
@@ -17,7 +17,7 @@ Quick instructions:
 * You copy that line to your LaTeX source and life is good.
 * Optional: You specify `-o out.pdf` and a cropped output PDF is also written for you.
 
-Don't forget to credit the folks that you steal from! Here's a bonus LaTeX+TikZ macro
+**OBVIOUSLY:** Don't forget to credit the folks that you steal from! Here's a bonus LaTeX+TikZ macro
 to do that:
 
 ```latex
