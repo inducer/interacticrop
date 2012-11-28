@@ -1,0 +1,128 @@
+#! /usr/bin/env python
+from __future__ import division, with_statement
+
+__copyright__ = "Copyright (C) 2012 Andreas Kloeckner"
+
+__license__ = """
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
+"""
+
+import matplotlib.pyplot as pt
+import cairo
+import poppler
+import numpy as np
+import os.path
+
+from optparse import OptionParser
+
+parser = OptionParser(usage="%prog PDF_FILE_NAME PAGE_NR")
+parser.add_option("-o", "--output-file",
+        metavar="output",
+        help="If specified, write output PDF. "
+        "Otherwise, just print \\includegraphics line.")
+parser.add_option("--keyval",
+        metavar="KEY=VAL",
+        help="Extra keyword=value options to include on the \\includegraphics line.")
+
+options, args = parser.parse_args()
+
+if len(args) != 2:
+    parser.print_help()
+    import sys
+    sys.exit(1)
+
+input_pdf_name, page_nr = args
+page_nr = int(page_nr) - 1
+
+doc = poppler.document_new_from_file("file://"+os.path.abspath(input_pdf_name), None)
+page = doc.get_page(page_nr)
+page_width, page_height = page.get_size()
+
+scale_factor = 2
+w = int(scale_factor*page_width)
+h = int(scale_factor*page_height)
+
+thumbnail = cairo.ImageSurface(cairo.FORMAT_ARGB32, w, h)
+cr = cairo.Context(thumbnail)
+cr.scale(scale_factor, scale_factor)
+page.render(cr)
+del cr
+
+class ArrayFront:
+    def __init__(self, data, shape, typestr):
+        self.__array_interface__ = dict(
+                data=data, shape=shape, typestr=typestr)
+
+data = np.asarray(ArrayFront(thumbnail.get_data(), (h, w, 4), "|u1"))
+
+pt.imshow(data)
+
+points = []
+
+def click(event):
+   tb = pt.get_current_fig_manager().toolbar
+   if event.button == 1 and event.inaxes and tb.mode == '':
+       points.append((event.xdata, h-event.ydata))
+       if len(points) == 2:
+           pt.close()
+
+pt.connect('button_press_event', click)
+pt.show()
+
+if len(points) == 2:
+    (x1, y1), (x2, y2) = points
+
+    pdf_units_to_cm = 2.54/72
+
+    top = max(y1, y2) / scale_factor
+    bottom = min(y1, y2) / scale_factor
+    left = min(x1, x2) / scale_factor
+    right = max(x1, x2) / scale_factor
+
+    # now in PDF units
+
+    if options.keyval:
+        keyval = ","+options.keyval
+    else:
+        keyval = ""
+
+    print "\\includegraphics[\n  viewport=%.2fcm %.2fcm %.2fcm %.2fcm,clip=true,page=%d%s\n]{%s}" % (
+            left*pdf_units_to_cm, bottom*pdf_units_to_cm,
+            right*pdf_units_to_cm,
+            top*pdf_units_to_cm,
+            page_nr+1, keyval, input_pdf_name)
+
+    if options.output_file:
+        from PyPDF2 import PdfFileWriter, PdfFileReader
+
+        with file(input_pdf_name, "rb") as inf:
+            pdf_reader = PdfFileReader(inf)
+
+            page = pdf_reader.getPage(page_nr)
+            page.mediaBox.upperRight = (right, top)
+            page.mediaBox.lowerLeft = (left, bottom)
+
+            pdf_writer = PdfFileWriter()
+            pdf_writer.addPage(page)
+
+            with file(options.output_file, "wb") as out_file:
+                pdf_writer.write(out_file)
+
+
+
