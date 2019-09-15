@@ -1,4 +1,4 @@
-#InteractiCrop
+# InteractiCrop
 
 Steal figures from other people's slide PDFs, in vector form, easily.
 
