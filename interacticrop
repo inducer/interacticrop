@@ -24,16 +24,13 @@ THE SOFTWARE.
 """
 
 import matplotlib.pyplot as pt
-import cairo
 import poppler
+from PIL import Image
 import numpy as np
 import os.path
 
 
-class ArrayFront:
-    def __init__(self, data, shape, typestr):
-        self.__array_interface__ = dict(
-                data=data, shape=shape, typestr=typestr)
+PDF_UNITS_TO_CM = 2.54/72
 
 
 def main():
@@ -58,22 +55,24 @@ def main():
 
     page_nr = int(args.page_nr) - 1
 
-    doc = poppler.document_new_from_file(
-            "file://"+os.path.abspath(args.pdf_name), None)
-    page = doc.get_page(page_nr)
-    page_width, page_height = page.get_size()
+    doc = poppler.load_from_file(args.pdf_name)
+    page = doc.create_page(page_nr)
+    page_rect = page.page_rect(poppler.PageBox.media_box)
+    h = page_rect.height
+    w = page_rect.width
 
-    scale_factor = 2
-    w = int(scale_factor*page_width)
-    h = int(scale_factor*page_height)
+    renderer = poppler.PageRenderer()
+    image = renderer.render_page(page)
 
-    thumbnail = cairo.ImageSurface(cairo.FORMAT_ARGB32, w, h)
-    cr = cairo.Context(thumbnail)
-    cr.scale(scale_factor, scale_factor)
-    page.render(cr)
-    del cr
+    pil_image = Image.frombytes(
+        "RGBA",
+        (image.width, image.height),
+        image.data,
+        "raw",
+        str(image.format),
+        )
 
-    data = np.asarray(ArrayFront(thumbnail.get_data(), (h, w, 4), "|u1"))
+    data = np.asarray(pil_image)
 
     pt.imshow(data)
 
@@ -92,12 +91,10 @@ def main():
     if len(points) == 2:
         (x1, y1), (x2, y2) = points
 
-        pdf_units_to_cm = 2.54/72
-
-        top = max(y1, y2) / scale_factor
-        bottom = min(y1, y2) / scale_factor
-        left = min(x1, x2) / scale_factor
-        right = max(x1, x2) / scale_factor
+        top = max(y1, y2)
+        bottom = min(y1, y2)
+        left = min(x1, x2)
+        right = max(x1, x2)
 
         # now in PDF units
 
@@ -110,9 +107,9 @@ def main():
                 "\\includegraphics[\n"
                 "viewport=%.2fcm %.2fcm %.2fcm %.2fcm,clip=true,page=%d%s\n"
                 "]{%s}" % (
-                    left*pdf_units_to_cm, bottom*pdf_units_to_cm,
-                    right*pdf_units_to_cm,
-                    top*pdf_units_to_cm,
+                    left*PDF_UNITS_TO_CM, bottom*PDF_UNITS_TO_CM,
+                    right*PDF_UNITS_TO_CM,
+                    top*PDF_UNITS_TO_CM,
                     page_nr+1, keyval, args.pdf_name))
 
         if args.output_file:

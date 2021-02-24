@@ -33,15 +33,16 @@ to do that:
 
 Dependencies:
 
-* [python-cairo](http://cairographics.org/)
 * [poppler-python](https://launchpad.net/poppler-python)
+* [Pillow](https://python-pillow.org/)
 * [PyPDF2](https://github.com/knowah/PyPDF2) (optional, if you'd like cropped output)
 * [matplotlib](http://matplotlib.org)
 
-Just run these two commands, perhaps with `sudo`:
+Just run these commands, perhaps with `sudo`:
 
-* `aptitude install python-cairo python-poppler python-matplotlib`
-* `pip install http://github.com/knowah/PyPDF2/tarball/master`
+* `aptitude install libpoppler-cpp-dev`
+* `pip install python-poppler pillow matplotlib`
+* `pip install http://github.com/knowah/PyPDF2/tarball/master` (optional)
 
 Not using Linux, where installing this stuff is easy? I'm sure there's someone
 on your friendly neighborhood app store ready to take your money.
