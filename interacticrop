@@ -113,17 +113,17 @@ def main():
                     page_nr+1, keyval, args.pdf_name))
 
         if args.output_file:
-            from PyPDF2 import PdfFileWriter, PdfFileReader
+            from PyPDF2 import PdfWriter, PdfReader
 
             with open(args.pdf_name, "rb") as inf:
-                pdf_reader = PdfFileReader(inf)
+                pdf_reader = PdfReader(inf)
 
-                page = pdf_reader.getPage(page_nr)
-                page.mediaBox.upperRight = (right, top)
-                page.mediaBox.lowerLeft = (left, bottom)
+                page = pdf_reader.pages[page_nr]
+                page.mediabox.upper_right = (right, top)
+                page.mediabox.lower_left = (left, bottom)
 
-                pdf_writer = PdfFileWriter()
-                pdf_writer.addPage(page)
+                pdf_writer = PdfWriter()
+                pdf_writer.add_page(page)
 
                 with open(args.output_file, "wb") as out_file:
                     pdf_writer.write(out_file)
